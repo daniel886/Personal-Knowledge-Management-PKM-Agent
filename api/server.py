@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import chat, ingest, review, search
+from api.routes import chat, graph, ingest, review, search
 from core.config import settings
 from core.scheduler import register_default_jobs
 from models.database import init_db
@@ -55,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(search.router)
     app.include_router(chat.router)
     app.include_router(review.router)
+    app.include_router(graph.router)
 
     @app.get("/health")
     async def health():
@@ -66,6 +67,13 @@ def create_app() -> FastAPI:
         if index.exists():
             return HTMLResponse(index.read_text(encoding="utf-8"))
         return HTMLResponse("<h1>PKM Agent</h1><p>Visit /docs for API.</p>")
+
+    @app.get("/graph", response_class=HTMLResponse)
+    async def graph_page():
+        page = static_dir / "graph.html"
+        if page.exists():
+            return HTMLResponse(page.read_text(encoding="utf-8"))
+        return HTMLResponse("<h1>Graph view unavailable</h1>")
 
     return app
 

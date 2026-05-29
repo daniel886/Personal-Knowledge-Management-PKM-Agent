@@ -99,3 +99,51 @@ class TaskInfo(BaseModel):
     id: str
     next_run: datetime | None
     trigger: str
+
+
+# ---------------- Knowledge Graph ----------------
+
+
+class GraphNode(BaseModel):
+    """A single node in the knowledge graph."""
+
+    id: str
+    title: str
+    source_type: str
+    tags: list[str] = Field(default_factory=list)
+    created_at: datetime | None = None
+    # Visual hints for the frontend
+    weight: int = 1  # node size proxy (number of connections)
+    group: str | None = None  # optional cluster label (defaults to source_type)
+
+
+class GraphEdge(BaseModel):
+    """A weighted edge between two graph nodes."""
+
+    source: str
+    target: str
+    weight: float = 1.0
+    edge_type: Literal["tag", "wikilink", "similarity"] = "tag"
+    label: str | None = None  # e.g. the shared tag name
+
+
+class GraphScope(str, Enum):
+    ALL = "all"
+    RECENT = "recent"
+    TAG = "tag"
+
+
+class GraphRequest(BaseModel):
+    scope: GraphScope = GraphScope.ALL
+    limit: int = Field(default=200, ge=1, le=1000)
+    tag: str | None = None  # only used when scope == tag
+    include_similarity: bool = False
+    similarity_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    min_tag_overlap: int = Field(default=1, ge=1)
+
+
+class GraphResponse(BaseModel):
+    scope: str
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+    stats: dict[str, Any] = Field(default_factory=dict)

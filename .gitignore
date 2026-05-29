@@ -10,6 +10,10 @@ dist/
 build/
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.json
+coverage.xml
+coverage_html/
 htmlcov/
 .tox/
 .mypy_cache/

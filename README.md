@@ -13,8 +13,9 @@
 - 🗂️ **Obsidian 双向同步**：自动写入 Inbox / Daily / Reviews 文件夹，含 YAML frontmatter、`[[wikilinks]]`、Mermaid mindmap
 - 🔎 **混合检索**：Chroma 向量搜索 + 本地关键词搜索 + 元数据过滤
 - 💬 **自然语言对话**：检索增强 (RAG) 的中文助手，支持长期记忆、引用回答
+- 🕸️ **知识图谱可视化**：`/graph` 交互式 D3.js 力导向图，按标签 / 双链 / 向量相似度三类边渲染，拖拽、缩放、点击查看节点详情
 - 🗓️ **定时自动 Review**：APScheduler 驱动，每周日 / 每月最后一天自动生成回顾报告
-- 🛠️ **生产级工程**：完整类型提示、`loguru` 日志、`tenacity` 重试、Docker、CI/CD、Pytest
+- 🛠️ **生产级工程**：完整类型提示、`loguru` 日志、`tenacity` 重试、Docker、CI/CD、Pytest 305 个测试 99% 覆盖率
 
 ---
 
@@ -148,8 +149,24 @@ python main.py rss-add https://hnrss.org/frontpage
 | POST   | `/api/search`           | 混合检索 (`{ "query":"…", "k":5 }`)            |
 | POST   | `/api/chat`             | 对话 (`{ "message":"…", "history":[…] }`)      |
 | POST   | `/api/review`           | 立即生成回顾 (`{ "period":"weekly" }`)         |
+| GET    | `/api/graph`            | 知识图谱 JSON（scope / limit / tag / similarity） |
+| GET    | `/graph`                | D3.js 力导向图前端面板                          |
 | GET    | `/api/tasks`            | 查看所有定时任务                               |
 | GET    | `/health`               | 健康检查                                       |
+
+### 🕸️ 知识图谱
+
+打开浏览器访问 `http://localhost:8000/graph` 即可看到交互式的知识图谱。
+
+- **scope=all** — 展示全部知识（默认 limit=200）
+- **scope=recent** — 仅最近 N 条
+- **scope=tag&tag=ai** — 按标签过滤
+- **三类边**：
+  - 🔵 蓝色 = 共享标签（权重 = 共享标签数）
+  - 🟠 橙色 = `[[wikilinks]]` 双链
+  - 🟢 绿色 = 向量相似度（`?include_similarity=true&similarity_threshold=0.75`）
+- 节点大小 = 节点度数（连接数越多越大）
+- 支持拖拽 / 缩放 / 点击查看节点详情
 
 ---
 
