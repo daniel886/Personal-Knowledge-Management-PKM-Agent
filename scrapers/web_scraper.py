@@ -55,6 +55,10 @@ class WebScraper(BaseScraper):
             return None
 
     async def scrape(self, target: str, **kwargs: Any) -> ScrapedDocument:
+        if not isinstance(target, str) or not target.lower().startswith(("http://", "https://")):
+            raise ValueError(
+                f"WebScraper only supports http(s):// URLs, got: {target!r}"
+            )
         logger.info(f"Web scraping {target}")
         html = await self._fetch_with_playwright(target)
         if not html:

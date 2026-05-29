@@ -28,6 +28,8 @@ async def vector_search(
     source_type: str | None = None,
     tags: list[str] | None = None,
 ) -> list[SearchResultItem]:
+    if k <= 0:
+        return []
     where: dict[str, Any] = {}
     if source_type:
         where["source_type"] = source_type
@@ -44,6 +46,8 @@ async def vector_search(
 
 async def keyword_search(query: str, *, k: int = 5) -> list[SearchResultItem]:
     """Simple keyword search across the Obsidian vault."""
+    if k <= 0:
+        return []
     matches = get_vault().search_notes(query)[:k]
     out: list[SearchResultItem] = []
     for note in matches:
