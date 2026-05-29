@@ -1,0 +1,58 @@
+# ============== Python ==============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+.python-version
+
+# ============== Virtual Env ==============
+venv/
+env/
+.venv/
+ENV/
+
+# ============== IDE ==============
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ============== Project ==============
+.env
+.env.local
+.env.*.local
+data/chroma/
+data/uploads/
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+logs/
+*.log
+
+# ============== Obsidian ==============
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# ============== Docker ==============
+.docker/
+docker-compose.override.yml
+
+# ============== Misc ==============
+node_modules/
+*.bak
+*.tmp
+.cache/
+playwright-report/
+test-results/

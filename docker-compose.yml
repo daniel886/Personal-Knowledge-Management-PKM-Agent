@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  pkm-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pkm-agent:latest
+    container_name: pkm-agent
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ${OBSIDIAN_VAULT_PATH:-./vault}:/app/vault
+    environment:
+      - OBSIDIAN_VAULT_PATH=/app/vault
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional Ollama service for fully-local deployment
+  ollama:
+    image: ollama/ollama:latest
+    container_name: pkm-ollama
+    restart: unless-stopped
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+volumes:
+  ollama-data:
