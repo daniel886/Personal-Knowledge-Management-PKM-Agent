@@ -507,7 +507,7 @@ def test_l9_8_chat_agent_history_and_reset(monkeypatch):
     import workflows.chat_workflow as cw
     from models.schemas import ChatMessage, ChatResponse
 
-    async def fake_run_chat(message, history=None, *, use_memory=True, top_k=6):
+    async def fake_run_chat(message, history=None, *, use_memory=True, top_k=6, **_kwargs):
         new_hist = (history or []) + [
             ChatMessage(role="user", content=message),
             ChatMessage(role="assistant", content=f"a:{message}"),

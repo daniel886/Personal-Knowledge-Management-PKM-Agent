@@ -18,6 +18,10 @@ async def chat(req: ChatRequest) -> ChatResponse:
             history=req.history,
             use_memory=req.use_memory,
             top_k=req.top_k,
+            rewrite_query=req.rewrite_query,
+            compress_history=req.compress_history,
+            history_token_budget=req.history_token_budget,
+            max_subqueries=req.max_subqueries,
         )
     except Exception as exc:
         logger.exception("Chat failed")

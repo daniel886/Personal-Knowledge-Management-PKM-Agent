@@ -72,12 +72,20 @@ class ChatRequest(BaseModel):
     history: list[ChatMessage] = Field(default_factory=list)
     use_memory: bool = True
     top_k: int = 6
+    # RAG optimisation toggles
+    rewrite_query: bool = False
+    compress_history: bool = False
+    history_token_budget: int = Field(default=1200, ge=200, le=8000)
+    max_subqueries: int = Field(default=3, ge=1, le=5)
 
 
 class ChatResponse(BaseModel):
     answer: str
     sources: list[SearchResultItem] = Field(default_factory=list)
     history: list[ChatMessage] = Field(default_factory=list)
+    # RAG diagnostics (optional)
+    subqueries: list[str] = Field(default_factory=list)
+    compressed_history_summary: str | None = None
 
 
 class ReviewRequest(BaseModel):

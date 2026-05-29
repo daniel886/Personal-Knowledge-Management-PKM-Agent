@@ -1,4 +1,9 @@
-"""LangGraph chat workflow with retrieval augmented generation."""
+"""LangGraph chat workflow with retrieval augmented generation.
+
+Optional RAG enhancements (toggled via ChatState flags):
+- rewrite_query:    expand user question into multiple sub-queries (better recall)
+- compress_history: summarise old turns when conversation grows (avoid overflow)
+"""
 from __future__ import annotations
 
 from typing import TypedDict
@@ -8,6 +13,7 @@ from langgraph.graph import END, StateGraph
 
 from core.llm import get_chat_llm
 from models.schemas import ChatMessage, ChatResponse, SearchResultItem
+from tools.rag_pipeline import compress_history, retrieve_with_rewrite
 from tools.search import hybrid_search
 from utils.logger import logger
 
@@ -27,13 +33,44 @@ class ChatState(TypedDict, total=False):
     top_k: int
     hits: list[SearchResultItem]
     answer: str
+    # RAG optimisation
+    rewrite_query: bool
+    compress_history: bool
+    history_token_budget: int
+    max_subqueries: int
+    subqueries: list[str]
+    compressed_history_summary: str | None
+
+
+async def node_compress(state: ChatState) -> ChatState:
+    """Optionally compress overlong history into a summary + recent tail."""
+    if not state.get("compress_history"):
+        return state
+    history = state.get("history", []) or []
+    new_history, summary = await compress_history(
+        history,
+        token_budget=state.get("history_token_budget", 1200),
+    )
+    return {
+        **state,
+        "history": new_history,
+        "compressed_history_summary": summary,
+    }
 
 
 async def node_retrieve(state: ChatState) -> ChatState:
     if not state.get("use_memory", True):
-        return {**state, "hits": []}
+        return {**state, "hits": [], "subqueries": []}
+    if state.get("rewrite_query"):
+        hits, subs = await retrieve_with_rewrite(
+            state["message"],
+            history=state.get("history", []),
+            k=state.get("top_k", 6),
+            max_subqueries=state.get("max_subqueries", 3),
+        )
+        return {**state, "hits": hits, "subqueries": subs}
     hits = await hybrid_search(state["message"], k=state.get("top_k", 6))
-    return {**state, "hits": hits}
+    return {**state, "hits": hits, "subqueries": [state["message"]]}
 
 
 async def node_answer(state: ChatState) -> ChatState:
@@ -53,6 +90,8 @@ async def node_answer(state: ChatState) -> ChatState:
             msgs.append(HumanMessage(content=h.content))
         elif h.role == "assistant":
             msgs.append(AIMessage(content=h.content))
+        elif h.role == "system":
+            msgs.append(SystemMessage(content=h.content))
     msgs.append(HumanMessage(content=state["message"]))
 
     llm = get_chat_llm()
@@ -64,9 +103,11 @@ async def node_answer(state: ChatState) -> ChatState:
 
 def build_chat_graph():
     g = StateGraph(ChatState)
+    g.add_node("compress_node", node_compress)
     g.add_node("retrieve", node_retrieve)
     g.add_node("answer_node", node_answer)
-    g.set_entry_point("retrieve")
+    g.set_entry_point("compress_node")
+    g.add_edge("compress_node", "retrieve")
     g.add_edge("retrieve", "answer_node")
     g.add_edge("answer_node", END)
     return g.compile()
@@ -88,12 +129,20 @@ async def run_chat(
     *,
     use_memory: bool = True,
     top_k: int = 6,
+    rewrite_query: bool = False,
+    compress_history: bool = False,
+    history_token_budget: int = 1200,
+    max_subqueries: int = 3,
 ) -> ChatResponse:
     state: ChatState = {
         "message": message,
         "history": history or [],
         "use_memory": use_memory,
         "top_k": top_k,
+        "rewrite_query": rewrite_query,
+        "compress_history": compress_history,
+        "history_token_budget": history_token_budget,
+        "max_subqueries": max_subqueries,
     }
     result = await get_chat_graph().ainvoke(state)
     new_history = (history or []) + [
@@ -104,4 +153,6 @@ async def run_chat(
         answer=result["answer"],
         sources=result.get("hits", []),
         history=new_history,
+        subqueries=result.get("subqueries", []),
+        compressed_history_summary=result.get("compressed_history_summary"),
     )

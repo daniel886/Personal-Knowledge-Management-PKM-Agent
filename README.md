@@ -12,10 +12,10 @@
 - 🧠 **智能流水线**（LangGraph 编排）：抓取 → 摘要 → 标签 → 关联推荐 → 思维导图 → 入库
 - 🗂️ **Obsidian 双向同步**：自动写入 Inbox / Daily / Reviews 文件夹，含 YAML frontmatter、`[[wikilinks]]`、Mermaid mindmap
 - 🔎 **混合检索**：Chroma 向量搜索 + 本地关键词搜索 + 元数据过滤
-- 💬 **自然语言对话**：检索增强 (RAG) 的中文助手，支持长期记忆、引用回答
+- 💬 **自然语言对话**：检索增强 (RAG) 的中文助手，支持长期记忆、引用回答；可选 **查询改写**（LLM 扩写多路子查询，提高召回）与 **上下文压缩**（超长历史自动摘要，避免上下文溢出）
 - 🕸️ **知识图谱可视化**：`/graph` 交互式 D3.js 力导向图，按标签 / 双链 / 向量相似度三类边渲染，拖拽、缩放、点击查看节点详情
 - 🗓️ **定时自动 Review**：APScheduler 驱动，每周日 / 每月最后一天自动生成回顾报告
-- 🛠️ **生产级工程**：完整类型提示、`loguru` 日志、`tenacity` 重试、Docker、CI/CD、Pytest 305 个测试 99% 覆盖率
+- 🛠️ **生产级工程**：完整类型提示、`loguru` 日志、`tenacity` 重试、Docker、CI/CD、Pytest 335 个测试 99% 覆盖率
 
 ---
 
@@ -147,7 +147,7 @@ python main.py rss-add https://hnrss.org/frontpage
 | POST   | `/api/ingest`           | 摄入 URL（`source_type` + `url`）              |
 | POST   | `/api/ingest/upload`    | 上传 PDF / DOCX / MD / TXT 并摄入              |
 | POST   | `/api/search`           | 混合检索 (`{ "query":"…", "k":5 }`)            |
-| POST   | `/api/chat`             | 对话 (`{ "message":"…", "history":[…] }`)      |
+| POST   | `/api/chat`             | 对话（可启用 `rewrite_query` / `compress_history`） |
 | POST   | `/api/review`           | 立即生成回顾 (`{ "period":"weekly" }`)         |
 | GET    | `/api/graph`            | 知识图谱 JSON（scope / limit / tag / similarity） |
 | GET    | `/graph`                | D3.js 力导向图前端面板                          |
@@ -167,6 +167,29 @@ python main.py rss-add https://hnrss.org/frontpage
   - 🟢 绿色 = 向量相似度（`?include_similarity=true&similarity_threshold=0.75`）
 - 节点大小 = 节点度数（连接数越多越大）
 - 支持拖拽 / 缩放 / 点击查看节点详情
+
+### 🧠 RAG 优化（查询改写 + 上下文压缩）
+
+`/api/chat` 内置两项可选 RAG 增强，默认关闭，按需启用：
+
+```json
+POST /api/chat
+{
+  "message": "Transformer 在多模态任务里有哪些扩展？",
+  "history": [...],
+  "rewrite_query": true,
+  "compress_history": true,
+  "history_token_budget": 1200,
+  "max_subqueries": 3
+}
+```
+
+- **rewrite_query** — 调用 LLM 将原问题扩写为 `max_subqueries` 条互补的中文检索短句，对每条子查询分别走 hybrid_search，最后做去重合并。适合「指代不清」或「多跳」问题，召回率显著提升。响应中通过 `subqueries` 回传实际使用的子查询列表，便于调试。
+- **compress_history** — 当对话历史 token 数超过 `history_token_budget`（CJK-aware 近似计数）时，把早期消息整合为一条 `system: previously: …` 的摘要消息，仅保留最近 4 轮原文。响应中通过 `compressed_history_summary` 回传压缩摘要。LLM 调用失败时自动降级为「直接截断」，保证对话不中断。
+
+两项功能都实现了「优雅降级」：任何 LLM 故障都会回退到原始问题 / 截断历史，永远不会让 `/api/chat` 报 500。
+
+实现位于 `tools/rag_pipeline.py`，由 `workflows/chat_workflow.py` 的 LangGraph 3-节点链路 (`compress_node → retrieve → answer_node`) 串联。
 
 ---
 

@@ -38,8 +38,21 @@ class PKMAgent:
         *,
         use_memory: bool = True,
         top_k: int = 6,
+        rewrite_query: bool = False,
+        compress_history: bool = False,
+        history_token_budget: int = 1200,
+        max_subqueries: int = 3,
     ) -> ChatResponse:
-        return await run_chat(message, history, use_memory=use_memory, top_k=top_k)
+        return await run_chat(
+            message,
+            history,
+            use_memory=use_memory,
+            top_k=top_k,
+            rewrite_query=rewrite_query,
+            compress_history=compress_history,
+            history_token_budget=history_token_budget,
+            max_subqueries=max_subqueries,
+        )
 
     async def review(
         self,

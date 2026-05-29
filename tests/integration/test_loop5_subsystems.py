@@ -188,7 +188,7 @@ async def test_iter09_chat_history_bounded(tmp_path, monkeypatch):
     import workflows.chat_workflow as cwm
     from models.schemas import ChatMessage, ChatResponse
 
-    async def fake_run_chat(message, history=None, *, use_memory=True, top_k=6):
+    async def fake_run_chat(message, history=None, *, use_memory=True, top_k=6, **_kwargs):
         h = (history or []) + [
             ChatMessage(role="user", content=message),
             ChatMessage(role="assistant", content=f"reply to {message}"),

@@ -80,7 +80,7 @@ def test_cov2_api_chat_returns_response(monkeypatch):
     import api.routes.chat as chat_route
 
     class FakeAgent:
-        async def chat(self, message, history=None, *, use_memory=True, top_k=6):
+        async def chat(self, message, history=None, *, use_memory=True, top_k=6, **_kwargs):
             return ChatResponse(
                 answer=f"echo:{message}",
                 sources=[],
@@ -379,7 +379,7 @@ def test_cov8b_pkm_agent_chat_dispatches(monkeypatch):
     from agents import pkm_agent
     from models.schemas import ChatResponse
 
-    async def fake_run_chat(message, history, *, use_memory, top_k):
+    async def fake_run_chat(message, history, *, use_memory, top_k, **_kwargs):
         return ChatResponse(answer=f"got:{message}", sources=[], history=[])
 
     monkeypatch.setattr(pkm_agent, "run_chat", fake_run_chat)
